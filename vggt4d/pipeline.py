@@ -12,8 +12,10 @@ notebooks and tests can also import it directly without any side effects.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Sequence
 
 import numpy as np
 import torch
@@ -29,6 +31,7 @@ from vggt4d.masks.dynamic_mask import (
 )
 from vggt4d.masks.refine_dyn_mask import RefineDynMask
 from vggt4d.models.vggt4d import VGGTFor4D
+from vggt4d.preprocess import PreprocessMode
 from vggt4d.utils.model_utils import inference, organize_qk_dict
 from vggt4d.utils.store import (
     save_depth,
@@ -40,7 +43,9 @@ from vggt4d.utils.store import (
 )
 
 DEFAULT_CHECKPOINT = Path("./ckpts/model_tracker_fixed_e20.pt")
+IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 PATCH_SIZE = 14
+_NATURAL_PART_RE = re.compile(r"(\d+)")
 
 
 @dataclass
@@ -79,17 +84,46 @@ def autodetect_device() -> torch.device:
     return torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
+def _natural_path_key(path: Path) -> tuple[tuple[int, int | str], ...]:
+    parts = _NATURAL_PART_RE.split(path.name)
+    return tuple(
+        (1, int(part)) if part.isdigit() else (0, part.lower()) for part in parts
+    )
+
+
+def list_scene_image_paths(scene_dir: Path) -> list[Path]:
+    """Return naturally sorted jpg/jpeg/png frame paths from one image directory."""
+    return sorted(
+        (
+            p
+            for p in scene_dir.iterdir()
+            if p.is_file() and p.suffix.lower() in IMAGE_SUFFIXES
+        ),
+        key=_natural_path_key,
+    )
+
+
+def load_image_paths(
+    image_paths: Sequence[str | Path],
+    device: torch.device,
+    mode: PreprocessMode = "crop",
+) -> Float[torch.Tensor, "n_img 3 h w"]:
+    """Load explicit image paths with the same preprocessing used by the pipeline."""
+    paths = [str(p) for p in image_paths]
+    if not paths:
+        raise ValueError("At least 1 image is required")
+    images = load_and_preprocess_images(paths, mode=mode)
+    return images.to(device)
+
+
 def load_scene_images(
-    scene_dir: Path, device: torch.device
+    scene_dir: Path, device: torch.device, mode: PreprocessMode = "crop"
 ) -> Float[torch.Tensor, "n_img 3 h w"] | None:
     """Load all jpg/png images in ``scene_dir``; return ``None`` if empty."""
-    image_paths = sorted(
-        [*scene_dir.glob("*.jpg"), *scene_dir.glob("*.png")]
-    )
+    image_paths = list_scene_image_paths(scene_dir)
     if not image_paths:
         return None
-    images = load_and_preprocess_images([str(p) for p in image_paths])
-    return images.to(device)
+    return load_image_paths(image_paths, device=device, mode=mode)
 
 
 class VGGT4DPipeline:

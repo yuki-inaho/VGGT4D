@@ -50,6 +50,9 @@ check: lint typecheck test radon-cc
 demo input output:
     uv run python demo_vggt4d.py --input_dir {{input}} --output_dir {{output}}
 
+infer input output:
+    uv run python -m scripts.infer --input {{input}} --output {{output}}
+
 viz-rrd input rrd="outputs/vggt4d.rrd":
     uv run python -m scripts.visualize --input {{input}} --mode rrd --rrd {{rrd}}
 

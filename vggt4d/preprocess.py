@@ -16,6 +16,12 @@ import torch
 from jaxtyping import Float, UInt8
 
 PreprocessMode = Literal["crop", "pad"]
+
+# Resolution contract:
+# - The pretrained VGGT/VGGT4D path follows the official 518px preprocessing convention.
+# - Patch embedding is shape-flexible, but both H and W must be divisible by 14.
+# - crop mode fixes W=518 and keeps H <= 518 after center-cropping when needed.
+# - pad mode preserves the full image by padding to 518x518.
 TARGET_SIZE = 518
 PATCH_SIZE = 14
 
