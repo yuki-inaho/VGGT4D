@@ -12,7 +12,6 @@ dependencies = [
     "huggingface_hub",
     "einops",
     "safetensors",
-    "gradio",
     "viser",
     "tqdm",
     "hydra-core",
