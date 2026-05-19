@@ -19,6 +19,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from einops import rearrange
+from jaxtyping import Bool, Float
 
 from vggt.utils.load_fn import load_and_preprocess_images
 from vggt4d.masks.dynamic_mask import (
@@ -38,22 +39,31 @@ from vggt4d.utils.store import (
     save_tum_poses,
 )
 
-
 DEFAULT_CHECKPOINT = Path("./ckpts/model_tracker_fixed_e20.pt")
 PATCH_SIZE = 14
 
 
 @dataclass
 class SceneResult:
-    """Numpy outputs of one VGGT4D scene; everything is host-side / GPU-free."""
+    """Numpy outputs of one VGGT4D scene; everything is host-side / GPU-free.
 
-    images: torch.Tensor
-    intrinsic: np.ndarray
-    extrinsic: np.ndarray
-    cam2world: np.ndarray
-    depth: np.ndarray
-    depth_conf: np.ndarray
-    refined_dyn_mask: torch.Tensor
+    Shape conventions (``N`` = number of frames, ``H``/``W`` = image height/width):
+        * ``images``        — ``(N, 3, H, W)`` torch tensor on inference device
+        * ``intrinsic``     — ``(N, 3, 3)``
+        * ``extrinsic``     — ``(N, 3, 4)``
+        * ``cam2world``     — ``(N, 4, 4)``
+        * ``depth``         — ``(N, H, W)``
+        * ``depth_conf``    — ``(N, H, W)``
+        * ``refined_dyn_mask`` — ``(N, H, W)`` boolean tensor
+    """
+
+    images: Float[torch.Tensor, "n_img 3 h w"]
+    intrinsic: Float[np.ndarray, "n_img 3 3"]
+    extrinsic: Float[np.ndarray, "n_img 3 4"]
+    cam2world: Float[np.ndarray, "n_img 4 4"]
+    depth: Float[np.ndarray, "n_img h w"]
+    depth_conf: Float[np.ndarray, "n_img h w"]
+    refined_dyn_mask: Bool[torch.Tensor, "n_img h w"]
 
     def save(self, output_dir: Path) -> None:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -69,7 +79,9 @@ def autodetect_device() -> torch.device:
     return torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
-def load_scene_images(scene_dir: Path, device: torch.device) -> torch.Tensor | None:
+def load_scene_images(
+    scene_dir: Path, device: torch.device
+) -> Float[torch.Tensor, "n_img 3 h w"] | None:
     """Load all jpg/png images in ``scene_dir``; return ``None`` if empty."""
     image_paths = sorted(
         [*scene_dir.glob("*.jpg"), *scene_dir.glob("*.png")]
@@ -100,8 +112,8 @@ class VGGT4DPipeline:
         return model.to(device)
 
     def _stage1_depth_and_dyn(
-        self, images: torch.Tensor
-    ) -> tuple[dict, torch.Tensor]:
+        self, images: Float[torch.Tensor, "n_img 3 h w"]
+    ) -> tuple[dict, Bool[torch.Tensor, "n_img h w"]]:
         """Run base inference and derive a binary dynamic mask."""
         predictions, qk_dict, enc_feat, agg_tokens_list = inference(self.model, images)
         del agg_tokens_list
@@ -131,7 +143,9 @@ class VGGT4DPipeline:
         return predictions, dyn_masks
 
     def _stage2_refine_extrinsics(
-        self, images: torch.Tensor, dyn_masks: torch.Tensor
+        self,
+        images: Float[torch.Tensor, "n_img 3 h w"],
+        dyn_masks: Bool[torch.Tensor, "n_img h w"],
     ) -> dict:
         """Re-run inference with dyn_masks to obtain robust camera extrinsics."""
         predictions, _, _, _ = inference(
@@ -142,12 +156,12 @@ class VGGT4DPipeline:
 
     def _stage3_refine_dyn_mask(
         self,
-        images: torch.Tensor,
-        depths: np.ndarray,
-        dyn_masks: torch.Tensor,
-        cam2world: np.ndarray,
-        intrinsic: np.ndarray,
-    ) -> torch.Tensor:
+        images: Float[torch.Tensor, "n_img 3 h w"],
+        depths: Float[np.ndarray, "n_img h w"],
+        dyn_masks: Bool[torch.Tensor, "n_img h w"],
+        cam2world: Float[np.ndarray, "n_img 4 4"],
+        intrinsic: Float[np.ndarray, "n_img 3 3"],
+    ) -> Bool[torch.Tensor, "n_img h w"]:
         refiner = RefineDynMask(
             images,
             torch.tensor(depths).to(self.device),
@@ -161,7 +175,9 @@ class VGGT4DPipeline:
         torch.cuda.empty_cache()
         return refined
 
-    def run_scene(self, images: torch.Tensor) -> SceneResult:
+    def run_scene(
+        self, images: Float[torch.Tensor, "n_img 3 h w"]
+    ) -> SceneResult:
         predictions1, dyn_masks = self._stage1_depth_and_dyn(images)
         predictions2 = self._stage2_refine_extrinsics(images, dyn_masks)
 

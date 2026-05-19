@@ -1,6 +1,7 @@
 set shell := ["bash", "-cu"]
 
-PKG := "vggt vggt4d demo_vggt4d.py vis_vggt4d.py eval_mask.py"
+PKG := "vggt4d/pipeline.py vggt4d/utils/store.py demo_vggt4d.py"
+PKG_ALL := "vggt vggt4d demo_vggt4d.py vis_vggt4d.py eval_mask.py"
 TESTS := "tests"
 
 default:
@@ -14,6 +15,9 @@ fmt:
 
 lint:
     uv run ruff check {{PKG}} {{TESTS}}
+
+lint-all:
+    uv run ruff check {{PKG_ALL}} {{TESTS}}
 
 lint-fix:
     uv run ruff check --fix {{PKG}} {{TESTS}}

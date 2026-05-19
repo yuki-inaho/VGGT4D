@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 from PIL import Image
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CHECKPOINT = REPO_ROOT / "ckpts" / "model_tracker_fixed_e20.pt"
 

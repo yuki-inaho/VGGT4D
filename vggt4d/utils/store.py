@@ -17,11 +17,16 @@ import open3d as o3d
 import torch
 from einops import rearrange
 from evo.core.trajectory import PoseTrajectory3D
+from jaxtyping import Float
 from scipy.spatial.transform import Rotation
 from torchvision.utils import save_image
 
-
 ArrayLike = np.ndarray | torch.Tensor
+
+C2W = Float[np.ndarray, "4 4"]
+C2WBatch = Float[np.ndarray, "n_img 4 4"]
+TumPose = Float[np.ndarray, "7"]  # [x, y, z, qw, qx, qy, qz]
+TumPoseBatch = Float[np.ndarray, "n_img 7"]
 
 
 def _as_numpy(array: ArrayLike) -> np.ndarray:
@@ -37,7 +42,9 @@ def _save_per_frame_npy(data_dir: Path, array: ArrayLike, prefix: str) -> None:
         np.save(data_dir / f"{prefix}_{i:04d}.npy", array[i])
 
 
-def _c2ws_to_tum_traj(c2ws: ArrayLike) -> tuple[np.ndarray, np.ndarray]:
+def _c2ws_to_tum_traj(
+    c2ws: ArrayLike,
+) -> tuple[TumPoseBatch, Float[np.ndarray, "n_img"]]:
     """Return TUM-format poses ``(N, 7)`` and synthetic timestamps ``(N,)``."""
     c2ws = _as_numpy(c2ws)
     tum_poses = np.stack([c2w_to_tumpose(c) for c in c2ws], axis=0)
@@ -71,7 +78,7 @@ def save_depth_conf(data_dir: Path, conf: ArrayLike) -> None:
     _save_per_frame_npy(data_dir, conf, prefix="conf")
 
 
-def c2w_to_tumpose(c2w: ArrayLike) -> np.ndarray:
+def c2w_to_tumpose(c2w: ArrayLike) -> TumPose:
     """Convert a 4x4 camera-to-world matrix to ``[x, y, z, qw, qx, qy, qz]``."""
     c2w = _as_numpy(c2w)
     xyz = c2w[:3, -1]
@@ -106,7 +113,7 @@ def save_tum_poses(data_dir: Path, c2ws: ArrayLike) -> None:
             f.write(f"{traj.timestamps[i]} {xyz} {wxyz}\n")
 
 
-def load_tum_poses(data_dir: Path) -> np.ndarray:
+def load_tum_poses(data_dir: Path) -> C2WBatch:
     data = np.loadtxt(data_dir / "pred_traj.txt")
     pred_pose = np.zeros((data.shape[0], 4, 4))
     pred_pose[:, :3, 3] = data[:, 1:4]

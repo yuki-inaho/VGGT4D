@@ -31,6 +31,7 @@ dependencies = [
     "open3d",
     "evo",
     "lightglue",
+    "jaxtyping>=0.2",
 ]
 
 [dependency-groups]
@@ -44,6 +45,19 @@ dev = [
 
 [tool.uv]
 no-build-isolation-package = ["pyceres"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["I"]
+# jaxtyping uses string-based shape DSL inside type annotations,
+# which ruff flags as F722 (forward-ref syntax) / F821 (undefined name).
+ignore = ["F722", "F821"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F401"]
+
 
 [[tool.uv.index]]
 name = "pytorch-cu118"
