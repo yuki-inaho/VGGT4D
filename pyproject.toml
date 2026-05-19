@@ -33,6 +33,7 @@ dependencies = [
     "jaxtyping>=0.2",
     "rerun-sdk>=0.22",
     "playwright>=1.40",
+    "pyvista>=0.48.4",
 ]
 
 [dependency-groups]

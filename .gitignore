@@ -14,8 +14,16 @@
 /test.ipynb
 /datasets
 /outputs
-*.rrd
 /logs
+
+# Visualization / player artifacts generated during local inspection.
+*.rrd
+*.mp4
+*.avi
+*.webm
+/player_assets
+/player_assets_*
+/*_player_assets
 
 /playwright-report
 /test-results

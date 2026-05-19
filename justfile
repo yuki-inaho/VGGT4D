@@ -1,6 +1,6 @@
 set shell := ["bash", "-cu"]
 
-PKG := "vggt4d/pipeline.py vggt4d/utils/store.py vggt4d/inference.py vggt4d/preprocess.py vggt4d/results.py vggt4d/visualize.py scripts demo_vggt4d.py"
+PKG := "vggt4d/pipeline.py vggt4d/utils/store.py vggt4d/inference.py vggt4d/preprocess.py vggt4d/results.py vggt4d/visualize.py vggt4d/player_assets.py scripts demo_vggt4d.py"
 PKG_ALL := "vggt vggt4d demo_vggt4d.py vis_vggt4d.py eval_mask.py"
 TESTS := "tests"
 
@@ -52,6 +52,12 @@ demo input output:
 
 infer input output:
     uv run python -m scripts.infer --input {{input}} --output {{output}}
+
+export-player-assets results output stride="1" max_points_per_frame="10000":
+    uv run python -m scripts.export_player_assets --results {{results}} --output {{output}} --stride {{stride}} --max-points-per-frame {{max_points_per_frame}}
+
+play-assets assets play_fps="4":
+    uv run python -m scripts.play_assets --assets {{assets}} --play-fps {{play_fps}}
 
 viz-rrd input rrd="outputs/vggt4d.rrd":
     uv run python -m scripts.visualize --input {{input}} --mode rrd --rrd {{rrd}}

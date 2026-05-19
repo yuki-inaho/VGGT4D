@@ -16,6 +16,7 @@ matplotlib
 pydantic
 pycolmap==3.10.0
 pyceres
+pyvista
 scikit-image
 scikit-learn
 open3d
