@@ -1,0 +1,56 @@
+[project]
+name = "vggt4d"
+version = "0.1.0"
+description = "VGGT4D: Mining Motion Cues in Visual Geometry Transformers for 4D Scene Reconstruction"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "torch==2.7.1",
+    "torchvision==0.22.1",
+    "numpy",
+    "Pillow",
+    "huggingface_hub",
+    "einops",
+    "safetensors",
+    "gradio",
+    "viser",
+    "tqdm",
+    "hydra-core",
+    "omegaconf",
+    "opencv-python",
+    "scipy",
+    "onnxruntime",
+    "requests",
+    "trimesh",
+    "matplotlib",
+    "pydantic",
+    "pycolmap==3.10.0",
+    "pyceres",
+    "scikit-image",
+    "scikit-learn",
+    "open3d",
+    "evo",
+    "lightglue",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.8",
+    "ty>=0.0.1a1",
+    "radon>=6",
+]
+
+[tool.uv]
+no-build-isolation-package = ["pyceres"]
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu118" }
+torchvision = { index = "pytorch-cu118" }
+lightglue = { git = "https://github.com/jytime/LightGlue.git" }
