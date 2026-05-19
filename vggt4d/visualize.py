@@ -20,7 +20,6 @@ import rerun.blueprint as rrb
 
 from vggt4d.inference import InferenceResult
 
-
 DEFAULT_APP_ID = "vggt4d"
 
 

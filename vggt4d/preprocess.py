@@ -15,7 +15,6 @@ import numpy as np
 import torch
 from jaxtyping import Float, UInt8
 
-
 PreprocessMode = Literal["crop", "pad"]
 TARGET_SIZE = 518
 PATCH_SIZE = 14

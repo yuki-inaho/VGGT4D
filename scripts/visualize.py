@@ -32,7 +32,6 @@ from vggt4d.inference import VGGT4DInference
 from vggt4d.preprocess import load_images, read_images_from_video
 from vggt4d.visualize import save_results_to_rrd, visualize_results
 
-
 Mode = Literal["viewer", "rrd", "screenshot"]
 
 
