@@ -50,5 +50,14 @@ check: lint typecheck test radon-cc
 demo input output:
     uv run python demo_vggt4d.py --input_dir {{input}} --output_dir {{output}}
 
+viz-rrd input rrd="outputs/vggt4d.rrd":
+    uv run python -m scripts.visualize --input {{input}} --mode rrd --rrd {{rrd}}
+
+viz-screenshot input rrd="outputs/vggt4d.rrd" png="outputs/vggt4d.png":
+    uv run python -m scripts.visualize --input {{input}} --mode screenshot --rrd {{rrd}} --screenshot {{png}}
+
+viz-viewer input:
+    uv run python -m scripts.visualize --input {{input}} --mode viewer
+
 clean:
     rm -rf .pytest_cache .ruff_cache .coverage outputs/test_scene
