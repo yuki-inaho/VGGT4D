@@ -84,7 +84,7 @@ def _run_inference(images, checkpoint: Path):
 
 def _load_or_infer_results(args):
     if args.results is not None:
-        results = load_inference_results(args.results)
+        results = load_inference_results(args.results, show_progress=not args.no_progress)
         print(f"Loaded {len(results)} saved per-frame results from {args.results}")
         return results
 
@@ -230,6 +230,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--filter-percent", type=float, default=50.0)
     parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable tqdm progress bars for loading and rerun logging",
+    )
+    parser.add_argument(
         "--checkpoint",
         type=Path,
         default=Path("./ckpts/model_tracker_fixed_e20.pt"),
@@ -253,11 +258,21 @@ def main(argv: list[str] | None = None) -> int:
     results = _load_or_infer_results(args)
 
     if args.mode == "viewer":
-        visualize_results(results, filter_percent=args.filter_percent, spawn=True)
+        visualize_results(
+            results,
+            filter_percent=args.filter_percent,
+            spawn=True,
+            show_progress=not args.no_progress,
+        )
         time.sleep(args.wait)  # keep process alive briefly for the viewer to flush
         return 0
 
-    save_results_to_rrd(results, args.rrd, filter_percent=args.filter_percent)
+    save_results_to_rrd(
+        results,
+        args.rrd,
+        filter_percent=args.filter_percent,
+        show_progress=not args.no_progress,
+    )
     print(f"Wrote {args.rrd}")
 
     if args.mode == "screenshot":

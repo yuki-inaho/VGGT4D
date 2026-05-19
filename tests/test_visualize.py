@@ -42,7 +42,7 @@ def _fake_result(seed: int, h: int = 32, w: int = 32) -> InferenceResult:
 def test_save_results_to_rrd_writes_file(tmp_path: Path):
     results = [_fake_result(i) for i in range(3)]
     rrd_path = tmp_path / "viz.rrd"
-    out = save_results_to_rrd(results, rrd_path, filter_percent=30.0)
+    out = save_results_to_rrd(results, rrd_path, filter_percent=30.0, show_progress=False)
     assert out == rrd_path
     assert rrd_path.exists()
     # Recording payloads are non-trivial in size even for tiny synthetic data.
@@ -51,7 +51,12 @@ def test_save_results_to_rrd_writes_file(tmp_path: Path):
 
 def test_save_results_to_rrd_rejects_invalid_filter_percent(tmp_path: Path):
     with pytest.raises(ValueError, match="filter_percent"):
-        save_results_to_rrd([_fake_result(0)], tmp_path / "viz.rrd", filter_percent=101.0)
+        save_results_to_rrd(
+            [_fake_result(0)],
+            tmp_path / "viz.rrd",
+            filter_percent=101.0,
+            show_progress=False,
+        )
 
 
 def test_filter_by_confidence_keeps_static_subset_with_integer_mask():

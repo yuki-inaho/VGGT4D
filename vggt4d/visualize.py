@@ -17,6 +17,7 @@ from typing import Sequence
 import numpy as np
 import rerun as rr
 import rerun.blueprint as rrb
+from tqdm.auto import tqdm
 
 from vggt4d.inference import InferenceResult
 
@@ -140,12 +141,19 @@ def visualize_results(
     filter_percent: float = 50.0,
     app_id: str = DEFAULT_APP_ID,
     spawn: bool = True,
+    show_progress: bool = True,
 ) -> None:
     """Stream VGGT4D results to a (possibly spawned) rerun viewer."""
     _validate_filter_percent(filter_percent)
     rr.init(app_id, spawn=spawn)
     rr.send_blueprint(_default_blueprint())
-    for i, result in enumerate(results):
+    for i, result in tqdm(
+        enumerate(results),
+        total=len(results),
+        desc="Streaming VGGT4D results to rerun",
+        unit="frame",
+        disable=not show_progress,
+    ):
         _log_frame(i, result, filter_percent)
 
 
@@ -154,13 +162,20 @@ def save_results_to_rrd(
     rrd_path: Path,
     filter_percent: float = 50.0,
     app_id: str = DEFAULT_APP_ID,
+    show_progress: bool = True,
 ) -> Path:
     """Write the same visualization to an ``.rrd`` file without opening a viewer."""
     _validate_filter_percent(filter_percent)
     rrd_path.parent.mkdir(parents=True, exist_ok=True)
     rr.init(app_id, spawn=False)
     rr.save(str(rrd_path), default_blueprint=_default_blueprint())
-    for i, result in enumerate(results):
+    for i, result in tqdm(
+        enumerate(results),
+        total=len(results),
+        desc="Writing VGGT4D results to .rrd",
+        unit="frame",
+        disable=not show_progress,
+    ):
         _log_frame(i, result, filter_percent)
     rr.disconnect()
     return rrd_path

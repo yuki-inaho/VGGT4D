@@ -7,8 +7,9 @@ from typing import Sized
 
 import numpy as np
 from PIL import Image
+from tqdm.auto import tqdm
 
-from vggt.utils.geometry import unproject_depth_map_to_point_map
+from vggt.utils.geometry import depth_to_world_coords_points
 from vggt4d.inference import InferenceResult
 from vggt4d.utils.store import load_tum_poses
 
@@ -74,7 +75,9 @@ def _validate_frame_arrays(
             )
 
 
-def load_inference_results(results_dir: str | Path) -> list[InferenceResult]:
+def load_inference_results(
+    results_dir: str | Path, show_progress: bool = True
+) -> list[InferenceResult]:
     """Load artifacts written by ``SceneResult.save`` / ``scripts.infer``.
 
     The returned objects can be passed directly to
@@ -101,20 +104,23 @@ def load_inference_results(results_dir: str | Path) -> list[InferenceResult]:
     _validate_count("camera pose", cam2world, n_frames)
 
     world_to_camera = np.linalg.inv(cam2world)[:, :3, :4].astype(np.float32)
-    depths = [np.load(path).astype(np.float32) for path in depth_paths]
-    point_maps = unproject_depth_map_to_point_map(
-        np.stack(depths, axis=0)[..., None], world_to_camera, intrinsics
-    ).astype(np.float32)
-
     results: list[InferenceResult] = []
-    for idx, image_path in enumerate(image_paths):
+    frame_iter = tqdm(
+        enumerate(image_paths),
+        total=n_frames,
+        desc="Loading saved VGGT4D results",
+        unit="frame",
+        disable=not show_progress,
+    )
+    for idx, image_path in frame_iter:
         image = _load_png(image_path)
         height, width = image.shape[:2]
-        depth = depths[idx]
+        depth = np.load(depth_paths[idx]).astype(np.float32)
         conf = np.load(conf_paths[idx]).astype(np.float32)
         mask_path = mask_paths[idx] if mask_paths else root / "__missing_dynamic_mask__.png"
         dynamic_mask = _load_mask(mask_path, shape=(height, width))
         _validate_frame_arrays(image, depth, conf, dynamic_mask, image_path)
+        point_map, _, _ = depth_to_world_coords_points(depth, world_to_camera[idx], intrinsics[idx])
 
         results.append(
             InferenceResult(
@@ -125,7 +131,7 @@ def load_inference_results(results_dir: str | Path) -> list[InferenceResult]:
                 intrinsic=intrinsics[idx],
                 depth_map=depth,
                 depth_conf=conf,
-                point_map_by_unprojection=point_maps[idx],
+                point_map_by_unprojection=point_map.astype(np.float32),
                 dynamic_mask=dynamic_mask,
             )
         )

@@ -15,7 +15,14 @@ def _has_cuda() -> bool:
         import torch
     except ImportError:
         return False
-    return torch.cuda.is_available()
+    if not torch.cuda.is_available():
+        return False
+    try:
+        torch.cuda.init()
+        torch.cuda.get_device_capability(0)
+    except Exception:
+        return False
+    return True
 
 
 needs_cuda = pytest.mark.skipif(not _has_cuda(), reason="CUDA not available")

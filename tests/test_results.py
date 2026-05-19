@@ -40,7 +40,7 @@ def _write_saved_results(root: Path, n_frames: int = 2, h: int = 6, w: int = 8) 
 def test_load_inference_results_roundtrips_saved_artifacts(tmp_path: Path):
     _write_saved_results(tmp_path)
 
-    results = load_inference_results(tmp_path)
+    results = load_inference_results(tmp_path, show_progress=False)
 
     assert len(results) == 2
     head = results[0]
@@ -60,16 +60,16 @@ def test_load_inference_results_rejects_mismatched_file_counts(tmp_path: Path):
     (tmp_path / "conf_0001.npy").unlink()
 
     with pytest.raises(ValueError, match="confidence"):
-        load_inference_results(tmp_path)
+        load_inference_results(tmp_path, show_progress=False)
 
 
 def test_loaded_inference_results_can_be_saved_to_rrd(tmp_path: Path):
     results_dir = tmp_path / "results"
     _write_saved_results(results_dir)
-    results = load_inference_results(results_dir)
+    results = load_inference_results(results_dir, show_progress=False)
 
     rrd_path = tmp_path / "scene.rrd"
-    save_results_to_rrd(results, rrd_path)
+    save_results_to_rrd(results, rrd_path, show_progress=False)
 
     assert rrd_path.exists()
     assert rrd_path.stat().st_size > 1024
