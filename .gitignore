@@ -5,9 +5,17 @@
 /**/__PYCACHE__
 /.venv
 
+/.pytest_cache
+/.ruff_cache
+/.coverage
+/htmlcov
+
 /ckpts
 /test.ipynb
 /datasets
 /outputs
 *.rrd
 /logs
+
+/playwright-report
+/test-results

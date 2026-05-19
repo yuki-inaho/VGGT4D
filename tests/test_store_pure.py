@@ -9,6 +9,7 @@ import pytest
 
 from vggt4d.utils.store import (
     c2w_to_tumpose,
+    enlarge_seg_masks,
     load_tum_poses,
     save_depth,
     save_depth_conf,
@@ -70,3 +71,9 @@ def test_to_tum_poses_matches_save(tmp_path: Path):
     traj, ts = to_tum_poses(c2ws)
     assert traj.shape == (2, 7)
     np.testing.assert_allclose(ts, [0.0, 1.0])
+
+
+def test_enlarge_seg_masks_rejects_unreadable_mask(tmp_path: Path):
+    (tmp_path / "dynamic_mask_0000.png").write_text("not an image")
+    with pytest.raises(ValueError, match="Could not load dynamic mask"):
+        enlarge_seg_masks(tmp_path)

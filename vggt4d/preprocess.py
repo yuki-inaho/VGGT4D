@@ -20,10 +20,16 @@ TARGET_SIZE = 518
 PATCH_SIZE = 14
 
 
+def _validate_downsample_factor(downsample_factor: int) -> None:
+    if downsample_factor < 1:
+        raise ValueError("downsample_factor must be greater than or equal to 1")
+
+
 def load_images(
     image_paths: Iterable[str | Path], downsample_factor: int = 1
 ) -> list[UInt8[np.ndarray, "h w 3"]]:
     """Load BGR images from disk via OpenCV (matches official ref)."""
+    _validate_downsample_factor(downsample_factor)
     images: list[np.ndarray] = []
     paths = list(image_paths)
     for path in paths[::downsample_factor]:
@@ -38,6 +44,7 @@ def read_images_from_video(
     video_path: str | Path, downsample_factor: int = 1
 ) -> list[UInt8[np.ndarray, "h w 3"]]:
     """Read BGR frames from a video file (matches official ref)."""
+    _validate_downsample_factor(downsample_factor)
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise ValueError(f"Could not open video at {video_path}")

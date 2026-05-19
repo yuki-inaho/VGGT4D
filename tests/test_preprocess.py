@@ -6,7 +6,13 @@ import numpy as np
 import pytest
 import torch
 
-from vggt4d.preprocess import PATCH_SIZE, TARGET_SIZE, preprocess_images
+from vggt4d.preprocess import (
+    PATCH_SIZE,
+    TARGET_SIZE,
+    load_images,
+    preprocess_images,
+    read_images_from_video,
+)
 
 
 def _bgr(h: int, w: int) -> np.ndarray:
@@ -47,3 +53,10 @@ def test_preprocess_resize_is_patch_aligned():
     out = preprocess_images([_bgr(700, 1000)], mode="crop")
     # cropping happens AFTER resize; only the resize step must be patch-aligned.
     assert out.shape[3] % PATCH_SIZE == 0
+
+
+def test_io_helpers_reject_non_positive_downsample_factor():
+    with pytest.raises(ValueError, match="downsample_factor"):
+        load_images([], downsample_factor=0)
+    with pytest.raises(ValueError, match="downsample_factor"):
+        read_images_from_video("missing.mp4", downsample_factor=0)

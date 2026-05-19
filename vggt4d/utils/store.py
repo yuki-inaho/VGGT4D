@@ -117,9 +117,7 @@ def load_tum_poses(data_dir: Path) -> C2WBatch:
     data = np.loadtxt(data_dir / "pred_traj.txt")
     pred_pose = np.zeros((data.shape[0], 4, 4))
     pred_pose[:, :3, 3] = data[:, 1:4]
-    pred_pose[:, :3, :3] = Rotation.from_quat(
-        data[:, 4:], scalar_first=True
-    ).as_matrix()
+    pred_pose[:, :3, :3] = Rotation.from_quat(data[:, 4:], scalar_first=True).as_matrix()
     pred_pose[:, 3, 3] = 1.0
     return pred_pose.astype(np.float32)
 
@@ -129,6 +127,8 @@ def enlarge_seg_masks(data_dir: Path, kernel_size: int = 5) -> None:
     for mask_path in sorted(data_dir.glob("dynamic_mask_*.png")):
         frame_id = int(mask_path.stem.split("_")[-1])
         mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        if mask is None:
+            raise ValueError(f"Could not load dynamic mask at {mask_path}")
         enlarged = cv2.dilate(mask, kernel, iterations=1)
         cv2.imwrite(str(data_dir / f"enlarged_dynamic_mask_{frame_id:04d}.png"), enlarged)
 

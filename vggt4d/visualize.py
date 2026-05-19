@@ -21,6 +21,7 @@ import rerun.blueprint as rrb
 from vggt4d.inference import InferenceResult
 
 DEFAULT_APP_ID = "vggt4d"
+PointCloud = tuple[np.ndarray, np.ndarray]
 
 
 def _default_blueprint() -> rrb.Blueprint:
@@ -63,17 +64,23 @@ def _filter_by_confidence(
     conf: np.ndarray,
     dyn_mask: np.ndarray,
     filter_percent: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return (points, colors, keep_mask_2d) with low-confidence points removed."""
+) -> tuple[PointCloud, PointCloud, np.ndarray]:
+    """Return dynamic-aware point clouds plus the 2D confidence mask."""
     threshold = np.percentile(conf, filter_percent)
-    keep_2d = conf > threshold
+    keep_2d = conf >= threshold
     keep_flat = keep_2d.reshape(-1)
     pts = points.reshape(-1, 3)[keep_flat]
     rgb = colors.reshape(-1, 3)[keep_flat]
-    static_keep = keep_flat & (~dyn_mask.reshape(-1))
+    dyn_flat = dyn_mask.reshape(-1).astype(bool)
+    static_keep = keep_flat & ~dyn_flat
     static_pts = points.reshape(-1, 3)[static_keep]
     static_rgb = colors.reshape(-1, 3)[static_keep]
-    return pts, rgb, (static_pts, static_rgb)
+    return (pts, rgb), (static_pts, static_rgb), keep_2d
+
+
+def _validate_filter_percent(filter_percent: float) -> None:
+    if not 0.0 <= filter_percent <= 100.0:
+        raise ValueError("filter_percent must be between 0 and 100")
 
 
 def _log_frame(idx: int, result: InferenceResult, filter_percent: float) -> None:
@@ -103,7 +110,7 @@ def _log_frame(idx: int, result: InferenceResult, filter_percent: float) -> None
     draw_pose(camera_to_world, f"body/pose{idx}", static=True)
     draw_pose(camera_to_world, "body/pose")
 
-    pts, rgb, (static_pts, static_rgb) = _filter_by_confidence(
+    (pts, rgb), (static_pts, static_rgb), keep_2d = _filter_by_confidence(
         points=result.point_map_by_unprojection,
         colors=result.image,
         conf=result.depth_conf,
@@ -119,7 +126,7 @@ def _log_frame(idx: int, result: InferenceResult, filter_percent: float) -> None
     )
 
     depth_for_viz = result.depth_map.copy()
-    depth_for_viz[~(result.depth_conf > np.percentile(result.depth_conf, filter_percent))] = 0
+    depth_for_viz[~keep_2d] = 0
     rr.log("body/cam/image", rr.Image(result.image))
     rr.log("body/cam/depth_map", rr.DepthImage(depth_for_viz))
     rr.log(
@@ -135,6 +142,7 @@ def visualize_results(
     spawn: bool = True,
 ) -> None:
     """Stream VGGT4D results to a (possibly spawned) rerun viewer."""
+    _validate_filter_percent(filter_percent)
     rr.init(app_id, spawn=spawn)
     rr.send_blueprint(_default_blueprint())
     for i, result in enumerate(results):
@@ -148,6 +156,7 @@ def save_results_to_rrd(
     app_id: str = DEFAULT_APP_ID,
 ) -> Path:
     """Write the same visualization to an ``.rrd`` file without opening a viewer."""
+    _validate_filter_percent(filter_percent)
     rrd_path.parent.mkdir(parents=True, exist_ok=True)
     rr.init(app_id, spawn=False)
     rr.save(str(rrd_path), default_blueprint=_default_blueprint())
