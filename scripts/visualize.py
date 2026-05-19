@@ -1,24 +1,24 @@
 """End-to-end visualization CLI.
 
 Pipeline:
-    1. Load a scene (image dir or video).
-    2. Run :class:`vggt4d.VGGT4DInference`.
-    3. Either spawn a rerun viewer interactively (``--mode viewer``) or write
+    1. Either load an image/video input and run :class:`vggt4d.VGGT4DInference`,
+       or load a saved VGGT4D result directory.
+    2. Either spawn a rerun viewer interactively (``--mode viewer``) or write
        a ``.rrd`` file plus a static screenshot driven by the Playwright CLI
        (``--mode rrd`` / ``--mode screenshot``).
 
 Examples::
 
     # Interactive viewer (requires a display)
-    uv run python -m scripts.visualize --input ./datasets/test_scene/scene1
+    uv run python -m scripts.visualize --input frames_dir
 
     # Headless: write an .rrd file only
-    uv run python -m scripts.visualize --input ./datasets/test_scene/scene1 \
-        --mode rrd --rrd outputs/scene1.rrd
+    uv run python -m scripts.visualize --results outputs/scene_results \
+        --mode rrd --rrd outputs/scene.rrd
 
     # Headless: write .rrd and grab a screenshot of the rerun web viewer
-    uv run python -m scripts.visualize --input ./datasets/test_scene/scene1 \
-        --mode screenshot --rrd outputs/scene1.rrd --screenshot outputs/scene1.png
+    uv run python -m scripts.visualize --results outputs/scene_results \
+        --mode screenshot --rrd outputs/scene.rrd --screenshot outputs/scene.png
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from typing import Literal, TextIO
 
 from vggt4d.inference import VGGT4DInference
 from vggt4d.preprocess import load_images, read_images_from_video
+from vggt4d.results import load_inference_results
 from vggt4d.visualize import save_results_to_rrd, visualize_results
 
 Mode = Literal["viewer", "rrd", "screenshot"]
@@ -79,6 +80,19 @@ def _run_inference(images, checkpoint: Path):
         raise SystemExit(f"Checkpoint does not exist: {checkpoint}")
     model = VGGT4DInference(checkpoint_path=checkpoint)
     return model(images)
+
+
+def _load_or_infer_results(args):
+    if args.results is not None:
+        results = load_inference_results(args.results)
+        print(f"Loaded {len(results)} saved per-frame results from {args.results}")
+        return results
+
+    images = _load_inputs(args.input, args.downsample)
+    print(f"Loaded {len(images)} frames from {args.input}")
+    results = _run_inference(images, args.checkpoint)
+    print(f"Inference produced {len(results)} per-frame results")
+    return results
 
 
 def _viewer_url(web_port: int, grpc_port: int) -> str:
@@ -196,7 +210,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument("--input", type=Path, required=True, help="Image directory or video file")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--input", type=Path, help="Image directory or video file")
+    source.add_argument(
+        "--results",
+        type=Path,
+        help="Saved VGGT4D result directory produced by scripts.infer or SceneResult.save",
+    )
     parser.add_argument(
         "--mode",
         choices=("viewer", "rrd", "screenshot"),
@@ -230,11 +250,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    images = _load_inputs(args.input, args.downsample)
-    print(f"Loaded {len(images)} frames from {args.input}")
-
-    results = _run_inference(images, args.checkpoint)
-    print(f"Inference produced {len(results)} per-frame results")
+    results = _load_or_infer_results(args)
 
     if args.mode == "viewer":
         visualize_results(results, filter_percent=args.filter_percent, spawn=True)

@@ -115,6 +115,7 @@ def save_tum_poses(data_dir: Path, c2ws: ArrayLike) -> None:
 
 def load_tum_poses(data_dir: Path) -> C2WBatch:
     data = np.loadtxt(data_dir / "pred_traj.txt")
+    data = np.atleast_2d(data)
     pred_pose = np.zeros((data.shape[0], 4, 4))
     pred_pose[:, :3, 3] = data[:, 1:4]
     pred_pose[:, :3, :3] = Rotation.from_quat(data[:, 4:], scalar_first=True).as_matrix()
