@@ -5,8 +5,11 @@ description = "VGGT4D: Mining Motion Cues in Visual Geometry Transformers for 4D
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "torch==2.7.1",
-    "torchvision==0.22.1",
+    # Blackwell (sm_120) requires a CUDA 13.0 build; cu118 wheels have no
+    # kernel image for this GPU. These versions are also used by the
+    # Blackwell-validated VGGT environment in this workspace.
+    "torch==2.12.0",
+    "torchvision==0.27.0",
     "numpy",
     "Pillow",
     "huggingface_hub",
@@ -62,11 +65,11 @@ ignore = ["F722", "F821"]
 
 
 [[tool.uv.index]]
-name = "pytorch-cu118"
-url = "https://download.pytorch.org/whl/cu118"
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
 explicit = true
 
 [tool.uv.sources]
-torch = { index = "pytorch-cu118" }
-torchvision = { index = "pytorch-cu118" }
+torch = { index = "pytorch-cu130" }
+torchvision = { index = "pytorch-cu130" }
 lightglue = { git = "https://github.com/jytime/LightGlue.git" }

@@ -56,8 +56,8 @@ pyenv shell 3.12
 python -m venv .venv
 source .venv/bin/activate
 
-# Install core dependencies
-pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu118
+# Install core dependencies (Blackwell branch: CUDA 13.0)
+pip install torch==2.12.0 torchvision==0.27.0 --index-url https://download.pytorch.org/whl/cu130
 
 # Install remaining project requirements
 pip install -r requirements.txt
